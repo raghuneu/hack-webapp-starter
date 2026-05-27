@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hackathon Starter — Subconscious Agents",
+  title: "Wayfair Ops Agent — FinOps & Customer Service",
   description:
-    "Chat and long-running agents powered by Subconscious, Vercel AI SDK, Baseten, and Cloudflare.",
+    "AI-powered internal operations assistant for Wayfair support and finance teams.",
 };
 
 export default function RootLayout({

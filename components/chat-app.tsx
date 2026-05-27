@@ -15,6 +15,18 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+const TOOL_LABELS: Record<string, string> = {
+  lookupOrder: "Order Lookup",
+  lookupCustomer: "Customer Lookup",
+  searchTickets: "Ticket Search",
+  getTicketDetails: "Ticket Details",
+  getBillingHistory: "Billing History",
+  triageTicket: "Triage",
+  draftResponse: "Draft Response",
+  getOpsMetrics: "Ops Metrics",
+  calculate: "Calculate",
+};
+
 function MessagePart({
   part,
   messageId,
@@ -42,19 +54,37 @@ function MessagePart({
   }
 
   if (part.type.startsWith("tool-")) {
-    const label = part.type.replace("tool-", "");
+    const rawName = part.type.replace("tool-", "");
+    const label = TOOL_LABELS[rawName] ?? rawName;
     const state = "state" in part ? part.state : "unknown";
+
+    const stateIcon =
+      state === "input-available"
+        ? "▶"
+        : state === "output-available"
+          ? "✓"
+          : state === "output-error"
+            ? "✗"
+            : "…";
+    const stateColor =
+      state === "output-available"
+        ? "text-emerald-400"
+        : state === "output-error"
+          ? "text-red-400"
+          : "text-[#7C5CFF]";
+
     return (
       <div
         key={`${messageId}-tool-${index}`}
-        className="mt-2 rounded-lg border border-[#FF5C28]/30 bg-[rgb(255_92_40/0.12)] px-3 py-2 text-xs"
+        className="mt-2 flex items-center gap-2 rounded-lg border border-[#7C5CFF]/30 bg-[rgb(124_92_255/0.08)] px-3 py-2 text-xs"
       >
-        <div className="font-medium text-[#FF5C28]">Tool: {label}</div>
-        <div className="mt-1 text-zinc-400">
-          {state === "input-available" && "Calling…"}
-          {state === "output-available" && "Done"}
+        <span className={`font-bold ${stateColor}`}>{stateIcon}</span>
+        <span className="font-medium text-[#7C5CFF]">{label}</span>
+        <span className="text-zinc-500">
+          {state === "input-available" && "Running…"}
+          {state === "output-available" && "Complete"}
           {state === "output-error" && "Error"}
-        </div>
+        </span>
       </div>
     );
   }
@@ -115,14 +145,14 @@ export function ChatApp() {
       <header className="border-b border-zinc-800 bg-black">
         <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-[#FF5C28]">
-              Hackathon Starter
+            <p className="text-xs font-medium uppercase tracking-wider text-[#7C5CFF]">
+              Track 3 — FinOps &amp; Customer Service
             </p>
             <h1 className="text-xl font-semibold tracking-tight text-white">
-              Chat + Agents on Subconscious
+              Wayfair Ops Agent
             </h1>
             <p className="mt-1 text-sm text-zinc-400">
-              Wayfair · Subconscious · Baseten · Cloudflare
+              Internal operations assistant for support &amp; finance teams
             </p>
           </div>
 
@@ -132,7 +162,7 @@ export function ChatApp() {
               onClick={() => setMode("chat")}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 mode === "chat"
-                  ? "bg-[#FF5C28] text-black"
+                  ? "bg-[#7C5CFF] text-white"
                   : "text-zinc-400 hover:text-white"
               }`}
             >
@@ -143,7 +173,7 @@ export function ChatApp() {
               onClick={() => setMode("agent")}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 mode === "agent"
-                  ? "bg-[#FF5C28] text-black"
+                  ? "bg-[#7C5CFF] text-white"
                   : "text-zinc-400 hover:text-white"
               }`}
             >
@@ -157,20 +187,15 @@ export function ChatApp() {
         <div className="mb-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4 text-sm text-zinc-400">
           {mode === "chat" ? (
             <p>
-              <span className="font-medium text-[#FF5C28]">Chat mode</span> — fast
-              replies with basic tools. Attach an image for multimodal reasoning
-              (use data URLs; see{" "}
-              <code className="rounded bg-zinc-900 px-1 text-zinc-200">
-                lib/subconscious.ts
-              </code>
-              ).
+              <span className="font-medium text-[#7C5CFF]">Chat</span> — Quick
+              lookups: orders, customers, billing, tickets. Attach screenshots
+              for visual context.
             </p>
           ) : (
             <p>
-              <span className="font-medium text-[#FF5C28]">Agent mode</span> —
-              long-running multi-step agent with web search, background tasks, and
-              MCP tool stubs. Kick off research and let it run up to 30 tool
-              steps.
+              <span className="font-medium text-[#7C5CFF]">Agent</span> —
+              Multi-step ops tasks: triage tickets, investigate billing issues,
+              draft responses, review weekly metrics.
             </p>
           )}
         </div>
@@ -179,16 +204,37 @@ export function ChatApp() {
           {messages.length === 0 && (
             <div className="flex h-full min-h-[320px] flex-col items-center justify-center text-center text-zinc-500">
               <p className="text-lg font-medium text-zinc-200">
-                Try something to get started
+                {mode === "chat"
+                  ? "What do you need to look up?"
+                  : "What should I investigate?"}
               </p>
-              <ul className="mt-4 max-w-md space-y-2 text-sm">
-                <li>“What&apos;s the weather in Boston?”</li>
-                <li>“Calculate (17 * 23) + 100”</li>
-                <li>Attach a screenshot and ask what you see</li>
-                <li>
-                  Switch to Agent: “Research hackathon project ideas for retail
-                  AI”
-                </li>
+              <ul className="mt-4 max-w-lg space-y-2 text-sm text-left">
+                {(mode === "chat"
+                  ? [
+                      "Look up order WF-2026-88421",
+                      "What's the billing history for Maria Garcia?",
+                      "Show me ticket TKT-40198",
+                      "Who is customer CUST-1005?",
+                    ]
+                  : [
+                      "Triage all open tickets and recommend priorities",
+                      "Investigate why Maria Garcia's refund hasn't been processed and draft a response",
+                      "Give me a weekly ops summary with key risks",
+                      "Emily Watson cancelled her first order — assess retention risk and draft a win-back message",
+                    ]
+                ).map((text) => (
+                  <li key={text}>
+                    <button
+                      type="button"
+                      className="w-full text-left rounded-lg border border-zinc-800 px-3 py-2 hover:border-[#7C5CFF] hover:bg-[#7C5CFF]/10 transition cursor-pointer"
+                      onClick={() => {
+                        sendMessage({ parts: [{ type: "text", text }] });
+                      }}
+                    >
+                      &quot;{text}&quot;
+                    </button>
+                  </li>
+                ))}
               </ul>
             </div>
           )}
@@ -201,18 +247,18 @@ export function ChatApp() {
               <div
                 className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                   message.role === "user"
-                    ? "bg-[#FF5C28] text-black"
+                    ? "bg-[#7C5CFF] text-white"
                     : "border border-zinc-800 bg-zinc-900 text-zinc-100"
                 }`}
               >
                 <div
                   className={`mb-1 text-xs font-medium uppercase tracking-wide ${
                     message.role === "user"
-                      ? "text-black/60"
-                      : "text-[#FF5C28]"
+                      ? "text-white/60"
+                      : "text-[#7C5CFF]"
                   }`}
                 >
-                  {message.role}
+                  {message.role === "user" ? "you" : "ops agent"}
                 </div>
                 {message.parts.map((part, index) => (
                   <MessagePart
@@ -228,8 +274,8 @@ export function ChatApp() {
 
           {isBusy && (
             <div className="flex items-center gap-2 text-sm text-zinc-400">
-              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[#FF5C28]" />
-              {mode === "agent" ? "Agent running…" : "Thinking…"}
+              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[#7C5CFF]" />
+              {mode === "agent" ? "Agent investigating…" : "Looking up…"}
             </div>
           )}
         </div>
@@ -245,11 +291,11 @@ export function ChatApp() {
             <div className="flex items-center gap-2 text-sm text-zinc-400">
               <span>
                 Image:{" "}
-                <span className="text-[#FF5C28]">{imageFile.name}</span>
+                <span className="text-[#7C5CFF]">{imageFile.name}</span>
               </span>
               <button
                 type="button"
-                className="text-[#FF5C28] hover:text-[#ff7347] hover:underline"
+                className="text-[#7C5CFF] hover:text-[#9B82FF] hover:underline"
                 onClick={() => {
                   setImageFile(null);
                   if (fileInputRef.current) fileInputRef.current.value = "";
@@ -274,27 +320,27 @@ export function ChatApp() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-[#FF5C28] hover:text-[#FF5C28]"
-              title="Attach image for multimodal reasoning"
+              className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm font-medium text-zinc-200 hover:border-[#7C5CFF] hover:text-[#7C5CFF]"
+              title="Attach screenshot for context"
             >
-              Image
+              Screenshot
             </button>
             <input
               value={input}
               onChange={(event) => setInput(event.target.value)}
               placeholder={
                 mode === "agent"
-                  ? "Kick off a long-running agent task…"
-                  : "Send a message…"
+                  ? "Describe an ops task to investigate…"
+                  : "Look up an order, customer, or ticket…"
               }
-              className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#FF5C28] focus:ring-2 focus:ring-[#FF5C28]/30"
+              className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#7C5CFF] focus:ring-2 focus:ring-[#7C5CFF]/30"
               disabled={isBusy}
             />
             {isBusy ? (
               <button
                 type="button"
                 onClick={() => stop()}
-                className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 hover:border-[#FF5C28]"
+                className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-200 hover:border-[#7C5CFF]"
               >
                 Stop
               </button>
@@ -302,7 +348,7 @@ export function ChatApp() {
               <button
                 type="submit"
                 disabled={!input.trim() && !imageFile}
-                className="rounded-xl bg-[#FF5C28] px-4 py-2 text-sm font-medium text-black hover:bg-[#ff7347] disabled:opacity-40"
+                className="rounded-xl bg-[#7C5CFF] px-4 py-2 text-sm font-medium text-white hover:bg-[#9B82FF] disabled:opacity-40"
               >
                 Send
               </button>
